@@ -1,5 +1,9 @@
-import 'package:get/get.dart';
+import 'dart:io';
 
+import 'package:get/get.dart';
+import 'package:getx_template/app/modules/home/model/UploadData.dart';
+
+import '../DatabaseHelper.dart';
 import '/app/core/base/base_controller.dart';
 import '/app/core/base/paging_controller.dart';
 import '/app/core/model/github_search_query_param.dart';
@@ -11,6 +15,8 @@ class HomeController extends BaseController {
   final GlobalRepository _repository =
       Get.find(tag: (GlobalRepository).toString());
 
+  final databaseHelper = DatabaseHelper();
+
   final RxList<GithubProjectUiData> _githubProjectListController =
       RxList.empty();
 
@@ -18,6 +24,15 @@ class HomeController extends BaseController {
       _githubProjectListController.toList();
 
   final pagingController = PagingController<GithubProjectUiData>();
+
+  late List<UploadData> allFiles = <UploadData>[].obs;
+
+  @override
+  Future<void> onInit() async {
+    super.onInit();
+    final files = await databaseHelper.getAll();
+    allFiles.addAll(files);
+  }
 
   void getGithubGetxProjectList() {
     if (!pagingController.canLoadNextPage()) return;
@@ -78,4 +93,6 @@ class HomeController extends BaseController {
   bool _isLastPage(int newListItemCount, int totalCount) {
     return (projectList.length + newListItemCount) >= totalCount;
   }
+
+  performUpload(File file) {}
 }

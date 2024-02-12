@@ -43,10 +43,15 @@ dependencies:
     sdk: flutter
   logger: ^2.0.1
   flutter_svg: ^2.0.7
-  connectivity_plus: ^4.0.1
+  connectivity_plus: ^5.0.2
   url_launcher: ^6.1.10
-  intl: 0.18.0
+  intl: 0.18.1
   dropdown_button2: ^1.8.2
+  path_provider: ^2.0.11
+  sqflite: ^2.3.2
+  file_picker: ^6.1.1
+  queue: ^3.1.0+2
+
 
 dev_dependencies:
   flutter_test:
