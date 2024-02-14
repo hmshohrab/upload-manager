@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:upload_manager/app/modules/home/model/UploadData.dart';
 import 'package:upload_manager/app/network/exceptions/app_exception.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/model/list_response.dart';
 import '../../../data/model/Attachment.dart';
@@ -85,18 +85,34 @@ class HomeController extends BaseController {
     });
   }
 
- List<UploadData> getAudioFile(){
-    return allFiles.where((element) => element.attachmentTypeID == AttachmentType.audio.number).toList();
+  List<UploadData> getAudioFile() {
+    return allFiles
+        .where((element) =>
+            element.attachmentTypeID == AttachmentType.audio.number)
+        .toList();
   }
-  List<UploadData> getDocFile(){
-    return allFiles.where((element) => element.attachmentTypeID == AttachmentType.file.number).toList();
+
+  List<UploadData> getDocFile() {
+    return allFiles
+        .where(
+            (element) => element.attachmentTypeID == AttachmentType.file.number)
+        .toList();
   }
-  List<UploadData> getImageFile(){
-    return allFiles.where((element) => element.attachmentTypeID == AttachmentType.image.number).toList();
+
+  List<UploadData> getImageFile() {
+    return allFiles
+        .where((element) =>
+            element.attachmentTypeID == AttachmentType.image.number)
+        .toList();
   }
-  List<UploadData> getVideoFile(){
-    return allFiles.where((element) => element.attachmentTypeID == AttachmentType.video.number).toList();
+
+  List<UploadData> getVideoFile() {
+    return allFiles
+        .where((element) =>
+            element.attachmentTypeID == AttachmentType.video.number)
+        .toList();
   }
+
   Future<void> saveAttachment(
       HashMap<String, dynamic> hashMap, Function callback) async {
     var a = await callDataService(
