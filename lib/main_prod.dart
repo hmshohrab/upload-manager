@@ -8,7 +8,7 @@ import 'data/end_points.dart';
 
 void main() {
   EnvConfig prodConfig = EnvConfig(
-    appName: "GetX Template",
+    appName: "Upload Manager",
     baseUrl: baseUrlApi,
     shouldCollectCrashLog: true,
   );

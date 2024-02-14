@@ -1,5 +1,9 @@
+import 'dart:collection';
+
 import 'package:get/get.dart';
 import 'package:get/get.dart' as get_x;
+import 'package:upload_manager/app/core/model/list_response.dart';
+import 'package:upload_manager/app/data/model/Attachment.dart';
 
 import '/app/core/model/github_search_query_param.dart';
 import '/app/data/model/github_project_search_response.dart';
@@ -19,4 +23,10 @@ class GlobalRepositoryImpl implements GlobalRepository {
       GithubSearchQueryParam queryParam) {
     return _remoteSource.searchGithubProject(queryParam);
   }
+
+  @override
+  Future<ListResponse<Attachment>> saveAttachment(HashMap<String, dynamic> hashMap, Function uploadingCallback) {
+    return _remoteSource.saveAttachment(hashMap, uploadingCallback);
+  }
+
 }

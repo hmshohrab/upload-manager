@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:upload_manager/app/modules/home/JobLabel.dart';
 
 import '/flavors/build_config.dart';
 import '/flavors/env_config.dart';
@@ -10,7 +11,7 @@ import 'data/end_points.dart';
 
 void main()  {
   EnvConfig devConfig = EnvConfig(
-    appName: "GetX Template Dev",
+    appName: "Upload Manager Dev",
     baseUrl: baseUrlApi,
     shouldCollectCrashLog: true,
   );

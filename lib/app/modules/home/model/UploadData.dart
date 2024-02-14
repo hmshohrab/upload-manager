@@ -1,31 +1,58 @@
+import 'dart:convert';
+/// id : 1
+/// ComplainID : 1
+/// AttachmentTypeID : 2
+/// filePath : ""
+/// fileName : ""
+/// status : "pending"
+
+UploadData uploadDataFromJson(String str) => UploadData.fromJson(json.decode(str));
+String uploadDataToJson(UploadData data) => json.encode(data.toJson());
 class UploadData {
-  int id;
-  String filePath;
-  String fileName;
-  String status; // e.g., "Queued", "Uploading", "Completed", "Failed"
-
   UploadData({
-    required this.filePath,
-    required this.fileName,
-    this.id = 0,
-    this.status = "Queued",
-  });
+      this.id, 
+      this.complainID, 
+      this.attachmentTypeID, 
+      this.filePath, 
+      this.fileName, 
+      this.status,});
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'filePath': filePath,
-      'fileName': fileName,
-      'status': status,
-    };
+  UploadData.fromJson(dynamic json) {
+    id = json['id'];
+    complainID = json['ComplainID'];
+    attachmentTypeID = json['AttachmentTypeID'];
+    filePath = json['filePath'];
+    fileName = json['fileName'];
+    status = json['status'];
+  }
+  int? id;
+  int? complainID;
+  int? attachmentTypeID;
+  String? filePath;
+  String? fileName;
+  String? status;
+UploadData copyWith({  int? id,
+  int? complainID,
+  int? attachmentTypeID,
+  String? filePath,
+  String? fileName,
+  String? status,
+}) => UploadData(  id: id ?? this.id,
+  complainID: complainID ?? this.complainID,
+  attachmentTypeID: attachmentTypeID ?? this.attachmentTypeID,
+  filePath: filePath ?? this.filePath,
+  fileName: fileName ?? this.fileName,
+  status: status ?? this.status,
+);
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{};
+    map['id'] = id;
+    map['ComplainID'] = complainID;
+    map['AttachmentTypeID'] = attachmentTypeID;
+    map['filePath'] = filePath;
+    map['fileName'] = fileName;
+    map['status'] = status;
+    return map;
   }
 
-  factory UploadData.fromMap(Map<String, dynamic> map) {
-    return UploadData(
-      id: map['id'] as int,
-      filePath: map['filePath'] as String,
-      fileName: map['fileName'] as String,
-      status: map['status'] as String,
-    );
-  }
 }

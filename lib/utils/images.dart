@@ -52,4 +52,8 @@ class ImagesAssets {
   static const String common = 'assets/images/common.png';
   static const String acTransfer = 'assets/images/ac_transfer.png';
   static const String changePassword = 'assets/images/changepass.png';
+  static const String pdf = 'assets/images/pdf.png';
+  static const String camera = 'assets/images/camera.png';
+  static const String speaker = 'assets/images/speaker.png';
+  static const String video = 'assets/images/video.png';
 }

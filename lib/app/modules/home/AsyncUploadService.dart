@@ -8,8 +8,10 @@ import 'DatabaseHelper.dart';
 import 'model/UploadData.dart';
 
 final queue = Queue<UploadData>();
-
-class UploadService {
+final aQ = AsyncQueue.autoStart(
+  // allowDuplicate: false,
+);
+class AsyncUploadService {
   static const _uploadUrl =
       "http://182.160.105.228:8018/Attachments/saveApplicationFileAttachments"; // Replace with your actual endpoint
 

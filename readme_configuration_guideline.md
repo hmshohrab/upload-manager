@@ -2,12 +2,12 @@
 
 **Step 1:** First of all click "Add/Edit Configurations" as like image 1:
 
-<img align="center" alt="1" src="repo_data/flutter_getx_template_1.png" />
+<img align="center" alt="1" src="repo_data/flutter_upload_manager_1.png" />
 
 **Step 2:** Choose "Flutter" from configuration list and select your Dart entrypoint path according
 to your flavor then give a name and allow dart support for this project. See on Image 2, 3 and 4:
 
-![Select Flutter configuration option](repo_data/flutter_getx_template_2.png)
+![Select Flutter configuration option](repo_data/flutter_upload_manager_2.png)
 
 ![Set 'dev' as build](https://user-images.githubusercontent.com/3769029/137329967-6a2421ce-98c7-4f42-9393-8817b2607678.png)
 

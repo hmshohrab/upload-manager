@@ -1,4 +1,4 @@
-package com.example.getx_template
+package com.puremindit.upload_manager
 
 import io.flutter.embedding.android.FlutterActivity
 

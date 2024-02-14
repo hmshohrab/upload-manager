@@ -14,10 +14,10 @@ class ListResponse<T extends Serializable> {
   }
 
   ListResponse.fromJson(dynamic json, Function() create) {
-    _message = json?['Message'];
+    _message = json?['message'];
     _responseObj = create();
-    _statusCode = json?['StatusCode'];
-    _token = json?['Token'];
+    _statusCode = json?['statusCode'];
+    _token = json?['token'];
   }
 
   dynamic _message;

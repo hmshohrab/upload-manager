@@ -1,6 +1,6 @@
 {
-    "name": "getx_template",
-    "short_name": "getx_template",
+    "name": "upload_manager",
+    "short_name": "upload_manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,5 +1,10 @@
+import 'dart:collection';
+
 import 'package:dio/dio.dart';
 
+import '../../../data/end_points.dart';
+import '../../core/model/list_response.dart';
+import '../model/Attachment.dart';
 import '/app/core/base/base_remote_source.dart';
 import '/app/core/model/github_search_query_param.dart';
 import '/app/data/model/github_project_search_response.dart';
@@ -23,4 +28,36 @@ class GlobalRemoteDataSourceImpl extends BaseRemoteSource
   }
 
   _parseGithubProjectSearchResponse(Response response) {}
+
+
+  @override
+  Future<ListResponse<Attachment>> saveAttachment(
+      HashMap<String, dynamic> hashMap, Function uploadingCallback) {
+    var endpoint = Endpoints.saveApplicationFileAttachmentsUrl;
+    final formData = FormData.fromMap(hashMap);
+    var dioCall = dioClient.post(
+      endpoint,
+      data: formData,
+      onSendProgress: (int sent, int total) {
+        double progress = sent / total * 100;
+        uploadingCallback(progress);
+      },
+    );
+
+    try {
+      return callApiWithErrorParser(dioCall)
+          .then((response) => ListResponse.fromJson(response.data, () {
+        List<Attachment> items = [];
+        if (response.data["responseObj"] != null) {
+          response.data["responseObj"].forEach((v) {
+            items.add(Attachment.fromJson(v));
+          });
+        }
+        return items;
+      }));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
 }
