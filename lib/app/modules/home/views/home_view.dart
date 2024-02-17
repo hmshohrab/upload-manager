@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter/log.dart';
 import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_utils_project/flutter_utils_project.dart';
 import 'package:get/get.dart';
@@ -752,7 +753,9 @@ class HomeView extends BaseView<HomeController> {
         await _mediaInfo.getMediaInfo(inputPath);
     int segmentDuration = 20;
     var totalDuration = mediaInfo["durationMs"] / 1000;
-    print("Hello $totalDuration");
+    if (kDebugMode) {
+      print("Hello $totalDuration");
+    }
     int numSegments = (totalDuration / segmentDuration).ceil();
 
     Directory directory = await getTemporaryDirectory();
@@ -775,87 +778,7 @@ class HomeView extends BaseView<HomeController> {
         addFile(inputPath, AttachmentType.video);
       }
     }
-
-/*    int segmentDuration = 10;
-    int numSegments = 2;
-
-    for (int i = 0; i < numSegments; i++) {
-      int startTime = i * segmentDuration;
-      int endTime = startTime + segmentDuration;
-      String outputPath = '$outputDirectory$startTime-$endTime.mp4';
-      String command =
-          '-ss $startTime -to $endTime -y -i $inputPath -c:a copy $outputPath';
-
-      await FFmpegKit.executeAsync(command);
-    }*/
   }
 
-  Future<void> sliceVideo1(String inputPath) async {
-    //   String command = '-i $inputPath -ss $startTime -t $segmentDuration -c copy $outputPath';
 
-    FFmpegKit.execute('-i file1.mp4 -c:v mpeg4 file2.mp4')
-        .then((session) async {
-      // Unique session id created for this execution
-      final sessionId = session.getSessionId();
-
-      // Command arguments as a single string
-      final command = session.getCommand();
-
-      // Command arguments
-      final commandArguments = session.getArguments();
-
-      // State of the execution. Shows whether it is still running or completed
-      final state = await session.getState();
-
-      // Return code for completed sessions. Will be undefined if session is still running or FFmpegKit fails to run it
-      final returnCode = await session.getReturnCode();
-
-      final startTime = session.getStartTime();
-      final endTime = await session.getEndTime();
-      final duration = await session.getDuration();
-
-      // Console output generated for this execution
-      final output = await session.getOutput();
-
-      // The stack trace if FFmpegKit fails to run a command
-      final failStackTrace = await session.getFailStackTrace();
-
-      // The list of logs generated for this execution
-      final logs = await session.getLogs();
-
-      // The list of statistics generated for this execution (only available on FFmpegSession)
-      final statistics = await (session).getStatistics();
-
-/*
-    // Duration of each short video segment (in seconds)
-    int segmentDuration = 10;
-
-    // Number of short videos to create
-    int numSegments = 5;
-
-    // Output directory for short videos
-    Directory directory = await getTemporaryDirectory();
-    String outputDirectory = directory.path;
-
-    // Create short videos
-    for (int i = 0; i < numSegments; i++) {
-      // Calculate start time and end time for each segment
-      int startTime = i * segmentDuration;
-      int endTime = startTime + segmentDuration;
-
-      // Construct output file path
-      String outputPath = '$outputDirectory$startTime-$endTime.mp4';
-
-      // Slice the video using FFmpeg
-      String command = '-i $inputPath -ss $startTime -t $segmentDuration -c copy $outputPath';
-      var rc = await FFmpegKit.execute(command);
-
-      if (rc == 0) {
-        print('Segment $i created successfully');
-      } else {
-        print('Error creating segment $i');
-      }
-    }*/
-    });
-  }
 }
