@@ -6,9 +6,11 @@ abstract class Routes {
 
   static const MAIN = _Paths.MAIN;
   static const HOME = _Paths.HOME;
+  static const UPLOAD_HISTORY = _Paths.UPLOAD_HISTORY;
 }
 
 abstract class _Paths {
   static const MAIN = '/main';
   static const HOME = '/home';
+  static const UPLOAD_HISTORY = '/upload-history';
 }

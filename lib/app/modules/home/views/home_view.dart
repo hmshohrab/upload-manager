@@ -1,13 +1,19 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter/log.dart';
+import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_utils_project/flutter_utils_project.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:media_info/media_info.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:upload_manager/app/modules/home/model/UploadData.dart';
+import 'package:upload_manager/app/modules/home/views/simple_recorder.dart';
+import 'package:upload_manager/app/routes/app_pages.dart';
 
 import '../../../../utils/color_resources.dart';
 import '../../../../utils/dimensions.dart';
@@ -15,16 +21,27 @@ import '../../../../utils/extensions.dart';
 import '../../../../utils/images.dart';
 import '../../../core/values/text_styles.dart';
 import '../DatabaseHelper.dart';
+import '../model/Audio.dart';
 import '/app/core/base/base_view.dart';
 import '/app/modules/home/controllers/home_controller.dart';
 
 class HomeView extends BaseView<HomeController> {
+  final ImagePicker picker = ImagePicker();
+
   HomeView();
 
   @override
   PreferredSizeWidget? appBar(BuildContext context) {
     return getAppBar(context, "Upload Manager",
-        onBackPressed: null, enableBackButton: false);
+        onBackPressed: null,
+        enableBackButton: false,
+        actions: [
+          IconButton.outlined(
+              onPressed: () {
+                Get.toNamed(Routes.UPLOAD_HISTORY);
+              },
+              icon: const Icon(Icons.history))
+        ]);
   }
 
   @override
@@ -34,39 +51,7 @@ class HomeView extends BaseView<HomeController> {
 
   @override
   Widget? floatingActionButton() {
-    return FloatingActionButton.extended(
-      onPressed: () async {
-        Map<Permission, PermissionStatus> statuses = await [
-          Permission.storage,
-          Permission.accessMediaLocation,
-          Permission.manageExternalStorage,
-          Permission.phone,
-        ].request();
-        print(statuses.toString());
-        FilePickerResult? result =
-        await FilePicker.platform.pickFiles(allowMultiple: true);
-
-        if (result != null) {
-          // files = List.generate(1, (index) => result.files.first.name.toString());
-          for (var element in result.paths) {
-            var data = UploadData(
-                id: Random().nextInt(1000),
-                complainID: 20,
-                attachmentTypeID: 2,
-                filePath: element ?? "",
-                fileName: element!.split("/").last,
-                status: "Pending");
-            await DatabaseHelper().insert(data);
-            controller.allFiles.add(data);
-          }
-        } else {
-          // User canceled the picker
-        }
-      },
-      tooltip: 'Add',
-      label: Text("Add"),
-      icon: Icon(Icons.add),
-    );
+    return null;
   }
 
   @override
@@ -78,282 +63,223 @@ class HomeView extends BaseView<HomeController> {
           Text(controller.label.value),
           const Divider(height: 20),
           ListView(
-            children: List.generate(
-                controller.allFiles.length,
-                (index) => Stack(
+            children: [
+              10.height,
+              (controller.getDocFile().isNotEmpty)
+                  ? buildPdfPreview()
+                  : const SizedBox(),
+              (controller.getImageFile().isNotEmpty)
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding:
-                              const EdgeInsets.all(Dimensions.paddingSizeSmall),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.rectangle,
-                            borderRadius: const BorderRadius.all(
-                                Radius.circular(Dimensions.radiusSmall)),
-                            border: Border.all(
-                              color: ColorResources.kPrimaryColor,
-                              width: 1.0,
-                            ),
-                          ),
-                          child: Row(
+                        const Text(
+                          "Photos",
+                          style: titleStyle,
+                        ).paddingSymmetric(horizontal: 10),
+                        const Divider(
+                          thickness: 1,
+                          height: 1,
+                        ),
+                        SizedBox(
+                          height: 120,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
                             children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                margin: const EdgeInsets.only(right: 10.0),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                child: CircleAvatar(
-                                  backgroundColor: Colors.transparent,
-                                  child: SizedBox(
-                                    width: 70.0,
-                                    height: 70.0,
-                                    child: ClipOval(
-                                      child: Icon(Icons.picture_as_pdf_outlined)
-                                          .marginAll(5)
-                                          .fit(fit: BoxFit.fill),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Text(controller.allFiles[index].fileName ?? "")
-                                  .flexible()
+                              for (var value in controller.getImageFile())
+                                previewImageWidget(value, () {
+                                  controller.removeFile(value);
+                                }),
+                            ],
+                          ),
+                        ).marginAll(Dimensions.marginSizeSmall),
+                      ],
+                    )
+                  : const SizedBox(),
+              (controller.getVideoFile().isNotEmpty)
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Videos",
+                          style: titleStyle,
+                        ).paddingSymmetric(horizontal: 10),
+                        const Divider(
+                          thickness: 1,
+                          height: 1,
+                        ),
+                        SizedBox(
+                          height: 120,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              for (var value in controller.getVideoFile())
+                                previewVideoWidget(value, () {
+                                  controller.removeFile(value);
+                                }),
+                            ],
+                          ),
+                        ).marginAll(Dimensions.marginSizeSmall),
+                      ],
+                    )
+                  : const SizedBox(),
+              (controller.getAudioFile().isNotEmpty == true)
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Audio Record",
+                          style: titleStyle,
+                        ).paddingSymmetric(horizontal: 10),
+                        const Divider(
+                          thickness: 1,
+                          height: 1,
+                        ),
+                        SizedBox(
+                          child: Column(
+                            children: [
+                              for (var value in controller.getAudioFile())
+                                previewAudioWidget(value, () {
+                                  controller.removeFile(value);
+                                }),
                             ],
                           ),
                         ),
-                        Positioned(
-                            right: 1,
-                            child: Container(
-                                color: ColorResources.kPrimaryColor,
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                )).onTap(() {
-                              controller.deleteFile(controller.allFiles[index]);
-                            }))
                       ],
-                    ).marginAll(Dimensions.marginSizeSmall)),
+                    )
+                  : const SizedBox(),
+              Row(
+                children: [
+                  Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width * 0.2,
+                      height: MediaQuery.sizeOf(context).height * 0.1,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          fit: BoxFit.fitHeight,
+                          image: Image.asset(ImagesAssets.pdf).image,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ).onTap(() {
+                    pickDocument();
+                  }).expand(),
+                  Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width * 0.2,
+                      height: MediaQuery.sizeOf(context).height * 0.1,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          fit: BoxFit.fitHeight,
+                          image: Image.asset(ImagesAssets.camera).image,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ).onTap(() {
+                    _showPickerDialog(context, AttachmentType.image);
+                  }).expand(),
+                  Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width * 0.2,
+                      height: MediaQuery.sizeOf(context).height * 0.1,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          fit: BoxFit.fitHeight,
+                          image: Image.asset(ImagesAssets.video).image,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ).onTap(() {
+                    _showPickerDialog(context, AttachmentType.video);
+                  }).expand(),
+                  Material(
+                    color: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width * 0.2,
+                      height: MediaQuery.sizeOf(context).height * 0.1,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          fit: BoxFit.fitHeight,
+                          image: Image.asset(ImagesAssets.speaker).image,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ).onTap(() {
+                    _showAudioPickerDialog(context, AttachmentType.audio);
+                  }).expand(),
+                ],
+              ).paddingSymmetric(horizontal: 10),
+              10.height,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                      onPressed: () {
+                        controller.addAllQueue();
+                      },
+                      style: OutlinedButton.styleFrom(
+                          backgroundColor: ColorResources.kPrimaryColor),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                          ),
+                          5.width,
+                          Text(
+                            "সাবমিট",
+                            style: titleStyleWhite,
+                          )
+                        ],
+                      )),
+                  10.width,
+                  OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: const Color(0xFF353333),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.cancel,
+                            color: Colors.white,
+                          ),
+                          5.width,
+                          const Text(
+                            "বাতিল",
+                            style: titleStyleWhite,
+                          )
+                        ],
+                      )),
+                ],
+              ),
+              80.height
+            ],
           ).expand(),
-          10.height,
-          (controller.getDocFile().isNotEmpty)
-              ? buildPdfPreview()
-              : const SizedBox(),
-          (controller.getImageFile().isNotEmpty)
-              ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Photos",
-                style: titleStyle,
-              ).paddingSymmetric(horizontal: 10),
-              const Divider(
-                thickness: 1,
-                height: 1,
-              ),
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (var value in controller.getImageFile())
-                      previewImageWidget(value, () {
-                        controller.getImageFile().remove(value);
-                      }),
-                  ],
-                ),
-              ).marginAll(Dimensions.marginSizeSmall),
-            ],
-          )
-              : const SizedBox(),
-          (controller.getVideoFile().isNotEmpty)
-              ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Videos",
-                style: titleStyle,
-              ).paddingSymmetric(horizontal: 10),
-              const Divider(
-                thickness: 1,
-                height: 1,
-              ),
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (var value in controller.getVideoFile())
-                      previewVideoWidget(value, () {
-                        controller.getVideoFile().remove(value);
-                      }),
-                  ],
-                ),
-              ).marginAll(Dimensions.marginSizeSmall),
-            ],
-          )
-              : const SizedBox(),
-          (controller.getAudioFile().isNotEmpty == true)
-              ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Audio Record",
-                style: titleStyle,
-              ).paddingSymmetric(horizontal: 10),
-              const Divider(
-                thickness: 1,
-                height: 1,
-              ),
-              SizedBox(
-                child: Column(
-                  children: [
-                    for (var value in controller.getAudioFile())
-                      previewAudioWidget(value, () {
-                        controller.allFiles.remove(value);
-                      }),
-                  ],
-                ),
-              ),
-            ],
-          )
-              : const SizedBox(),
-          Row(
-            children: [
-              Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Container(
-                  width: MediaQuery.sizeOf(context).width * 0.2,
-                  height: MediaQuery.sizeOf(context).height * 0.1,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      fit: BoxFit.fitHeight,
-                      image: Image.asset(ImagesAssets.pdf).image,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ).onTap(() {
-                // pickDocument();
-              }).expand(),
-              Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Container(
-                  width: MediaQuery.sizeOf(context).width * 0.2,
-                  height: MediaQuery.sizeOf(context).height * 0.1,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      fit: BoxFit.fitHeight,
-                      image: Image.asset(ImagesAssets.camera).image,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ).onTap(() {
-                //_showPickerDialog(context, AttachmentType.Image);
-              }).expand(),
-              Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Container(
-                  width: MediaQuery.sizeOf(context).width * 0.2,
-                  height: MediaQuery.sizeOf(context).height * 0.1,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      fit: BoxFit.fitHeight,
-                      image: Image.asset(ImagesAssets.video).image,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ).onTap(() {
-                //_showImagePickerDialog(context);
-                //_showPickerDialog(context, AttachmentType.Video);
-              }).expand(),
-              Material(
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Container(
-                  width: MediaQuery.sizeOf(context).width * 0.2,
-                  height: MediaQuery.sizeOf(context).height * 0.1,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      fit: BoxFit.fitHeight,
-                      image: Image.asset(ImagesAssets.speaker).image,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ).onTap(() {
-                //_showAudioPickerDialog(context, AttachmentType.Audio);
-              }).expand(),
-            ],
-          ).paddingSymmetric(horizontal: 10),
-
-          10.height,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              OutlinedButton(
-                  onPressed: () {
-                    controller.addAllQueue();
-                  },
-                  style: OutlinedButton.styleFrom(
-                      backgroundColor: ColorResources.kPrimaryColor),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                      ),
-                      5.width,
-                      Text(
-                        "সাবমিট",
-                        style: titleStyleWhite,
-                      )
-                    ],
-                  )),
-              10.width,
-              OutlinedButton(
-                  onPressed: () {
-                  },
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: const Color(0xFF353333),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.cancel,
-                        color: Colors.white,
-                      ),
-                      5.width,
-                      const Text(
-                        "বাতিল",
-                        style: titleStyleWhite,
-                      )
-                    ],
-                  )),
-            ],
-          ),
-          80.height
         ],
       );
     });
   }
+
   Widget previewImageWidget(UploadData value, Function onTap) {
     return Padding(
       padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
@@ -372,15 +298,16 @@ class HomeView extends BaseView<HomeController> {
               ),
             ),
             child: Image.file(
-              File(value.filePath??""),
+              File(value.filePath ?? ""),
               fit: BoxFit.fill,
             ),
           ),
           Positioned(
               right: 1,
               child: Container(
-                  color: ColorResources.kPrimaryColor,
-                  child: const Icon(Icons.close, color: Colors.white))
+                      color: ColorResources.RED,
+                      child:
+                          const Icon(Icons.delete_forever, color: Colors.white))
                   .onTap(() {
                 //    controller.imageUploadStatus.value = UploadStatus.notStarted;
                 //  controller.addImage(attachmentsType, index, "");
@@ -423,8 +350,9 @@ class HomeView extends BaseView<HomeController> {
           Positioned(
               right: 1,
               child: Container(
-                  color: ColorResources.kPrimaryColor,
-                  child: const Icon(Icons.close, color: Colors.white))
+                      color: ColorResources.RED,
+                      child:
+                          const Icon(Icons.delete_forever, color: Colors.white))
                   .onTap(() {
                 //    controller.imageUploadStatus.value = UploadStatus.notStarted;
                 //  controller.addImage(attachmentsType, index, "");
@@ -437,7 +365,6 @@ class HomeView extends BaseView<HomeController> {
     );
   }
 
-
   previewAudioWidget(UploadData value, Function() onTap) {
     return Stack(
       children: [
@@ -446,7 +373,7 @@ class HomeView extends BaseView<HomeController> {
           decoration: BoxDecoration(
             shape: BoxShape.rectangle,
             borderRadius:
-            const BorderRadius.all(Radius.circular(Dimensions.radiusSmall)),
+                const BorderRadius.all(Radius.circular(Dimensions.radiusSmall)),
             border: Border.all(
               color: ColorResources.kPrimaryColor,
               width: 1.0,
@@ -478,21 +405,20 @@ class HomeView extends BaseView<HomeController> {
                   ),
                 ),
               ),
-              Text(value.fileName ?? "")
+              Text(value.fileName ?? "").flexible()
             ],
           ),
         ),
         Positioned(
             right: 1,
             child: Container(
-                color: ColorResources.kPrimaryColor,
+                color: ColorResources.RED,
                 child: const Icon(
-                  Icons.close,
+                  Icons.delete_forever,
                   color: Colors.white,
                 )).onTap(() {
               onTap();
-            }))
-            .visible(controller.getAudioFile().isNotEmpty == true)
+            })).visible(controller.getAudioFile().isNotEmpty == true)
       ],
     ).marginSymmetric(vertical: Dimensions.marginSizeSmall, horizontal: 15);
   }
@@ -544,23 +470,22 @@ class HomeView extends BaseView<HomeController> {
                       ),
                     ),
                   ),
-                  Text(name ??"")
+                  Text(name ?? "")
                 ],
               ),
             ),
             Positioned(
                 right: 1,
                 child: Container(
-                    color: ColorResources.kPrimaryColor,
+                    color: ColorResources.RED,
                     child: const Icon(
-                      Icons.close,
+                      Icons.delete_forever,
                       color: Colors.white,
                     )).onTap(() {
-                  controller.getDocFile().remove(element);
-                 }))
+                  controller.removeFile(element);
+                }))
           ],
         ).marginAll(Dimensions.marginSizeSmall);
-
         documentList.add(document);
       });
 
@@ -580,5 +505,357 @@ class HomeView extends BaseView<HomeController> {
         ),
       );
     }
+  }
+
+  Future<void> _showPickerDialog(
+      BuildContext context, AttachmentType attachmentType) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Choose an option"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.photo_library),
+                  title: Text("Gallery"),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    if (attachmentType == AttachmentType.video) {
+                      openCameraOrGalleryForVideo(ImageSource.gallery);
+                    } else if (attachmentType == AttachmentType.image) {
+                      openCameraOrGalleryForImage(ImageSource.gallery);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.camera),
+                  title: Text("Camera"),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    if (attachmentType == AttachmentType.video) {
+                      openCameraOrGalleryForVideo(ImageSource.camera);
+                    } else if (attachmentType == AttachmentType.image) {
+                      openCameraOrGalleryForImage(ImageSource.camera);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAudioPickerDialog(
+      BuildContext context, AttachmentType attachmentType) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Choose an option"),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.photo_library),
+                  title: Text("Gallery"),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    pickAudioFile();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.camera),
+                  title: Text("Record Audio"),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    voiceRecordDialog("Input Voice", 350);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  openCameraOrGalleryForVideo(ImageSource source) async {
+    final XFile? cameraOrGalleryVideo = await picker.pickVideo(source: source);
+    if (cameraOrGalleryVideo?.path.isNotEmpty == true) {
+      //  addFile(cameraOrGalleryVideo!.path, AttachmentType.video);
+
+      controller.showLoading();
+
+      await sliceVideo(cameraOrGalleryVideo!.path ?? "");
+      controller.hideLoading();
+
+      /*    var imageInt = await getThumbFile(cameraOrGalleryVideo!.path);
+      if (imageInt != null) {
+        controller.videoAttachmentStatus.value.files
+            .add(cameraOrGalleryVideo.path);
+        controller.updateVideoAttachmentStatus();
+        controller.videoFilesThump.add(imageInt);
+      }*/
+    }
+  }
+
+  openCameraOrGalleryForImage(ImageSource source) async {
+    final XFile? cameraOrGalleryImage = await picker.pickImage(source: source);
+    if (cameraOrGalleryImage?.path.isNotEmpty == true) {
+      addFile(cameraOrGalleryImage!.path, AttachmentType.image);
+      /*    controller.imageAttachmentStatus.value.files
+          .add(cameraOrGalleryImage!.path);
+      controller.updateImageAttachmentStatus();*/
+      //   controller.imageFiles.add(cameraOrGalleryImage!.path);
+    }
+  }
+
+  Future<void> voiceRecordDialog(String title, double width) async {
+    Audio m = await Get.generalDialog(
+      pageBuilder: (BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
+        return ScaffoldMessenger(
+            child: Builder(
+                builder: (context) => Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Center(
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(15))),
+                        child: Container(
+                            height: 300,
+                            width: width,
+                            margin: EdgeInsets.all(10),
+                            color: Colors.white,
+                            child: SimpleRecorder(
+                                "controller.categoryModel.id.toString()")),
+                      ),
+                    ))));
+      },
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: animation,
+          child: child,
+        );
+      },
+    );
+    if (!m.name.isEmptyOrNull) {
+      addFile(m.name!, AttachmentType.audio);
+    }
+  }
+
+  pickAudioFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'WAV',
+          'AIFF',
+          'PCM',
+          'FLAC',
+          'ALAC',
+          'WMA',
+          'MP3',
+          'AAC',
+          'Ogg'
+        ],
+        allowMultiple: true);
+
+    if (result != null) {
+      for (var element in result.paths) {
+        addFile(element ?? "", AttachmentType.audio);
+      }
+    } else {
+      // User canceled the picker
+    }
+  }
+
+  pickDocument() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf',
+          'TXT',
+          'RTF',
+          'DOC',
+          'DOCX',
+          'XLS',
+          'XLSX',
+          'ODS',
+          'PPT',
+          'PPTX',
+          'ODP'
+        ],
+        allowMultiple: true);
+
+    if (result != null) {
+      for (var element in result.paths) {
+        addFile(element ?? "", AttachmentType.file);
+      }
+    } else {
+      // User canceled the picker
+    }
+  }
+
+  addFile(String filePath, AttachmentType attachmentType) async {
+    if (filePath.isNotEmpty) {
+      final ifExisting = controller.allFiles
+          .firstWhereOrNull((element) => element.filePath == filePath);
+      if (ifExisting == null) {
+        var data = UploadData(
+            id: Random().nextInt(1000),
+            complainID: 20,
+            attachmentTypeID: attachmentType.number,
+            filePath: filePath ?? "",
+            fileName: filePath.split("/").last,
+            status: "Pending");
+        await DatabaseHelper().insert(data);
+        controller.allFiles.add(data);
+      }
+    }
+  }
+
+  ///Executes the FFMPEG [command]
+  ///Note: Green bar on the right is a Flutter issue. <https://github.com/flutter/engine/pull/24888>
+  ///Should get fixed in a 3.1.0+ stable release <https://github.com/flutter/engine/pull/24888#issuecomment-1212374010>
+  Future<ReturnCode?> ffmpegExecute(String command) async {
+    final session = await FFmpegKit.execute(command);
+
+    final returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      print("Success");
+    } else if (ReturnCode.isCancel(returnCode)) {
+      print("Cancel");
+    } else {
+      print("Error");
+      final failStackTrace = await session.getFailStackTrace();
+      print(failStackTrace);
+      List<Log> logs = await session.getLogs();
+      for (var element in logs) {
+        print(element.getMessage());
+      }
+    }
+    return returnCode;
+  }
+
+  final MediaInfo _mediaInfo = MediaInfo();
+
+  Future<void> sliceVideo(String inputPath) async {
+    final Map<String, dynamic> mediaInfo =
+        await _mediaInfo.getMediaInfo(inputPath);
+    int segmentDuration = 20;
+    var totalDuration = mediaInfo["durationMs"] / 1000;
+    print("Hello $totalDuration");
+    int numSegments = (totalDuration / segmentDuration).ceil();
+
+    Directory directory = await getTemporaryDirectory();
+    String outputDirectory = directory.path;
+    List<String> trimmedFiles = [];
+
+    for (int i = 0; i < numSegments; i++) {
+      // String outputPath = '$outputDirectory-abcd.mp4';
+      int startTime = i * segmentDuration;
+
+      int endTime = startTime + segmentDuration;
+      String outputPath =
+          '$outputDirectory${Random.secure().nextInt(1000)}$startTime-$endTime.mp4';
+      final returnCode = await ffmpegExecute(
+          '-ss $startTime -to $endTime -y -i $inputPath -c:a copy $outputPath');
+      if (ReturnCode.isSuccess(returnCode)) {
+        trimmedFiles.add(outputPath);
+        addFile(outputPath, AttachmentType.video);
+      } else {
+        addFile(inputPath, AttachmentType.video);
+      }
+    }
+
+/*    int segmentDuration = 10;
+    int numSegments = 2;
+
+    for (int i = 0; i < numSegments; i++) {
+      int startTime = i * segmentDuration;
+      int endTime = startTime + segmentDuration;
+      String outputPath = '$outputDirectory$startTime-$endTime.mp4';
+      String command =
+          '-ss $startTime -to $endTime -y -i $inputPath -c:a copy $outputPath';
+
+      await FFmpegKit.executeAsync(command);
+    }*/
+  }
+
+  Future<void> sliceVideo1(String inputPath) async {
+    //   String command = '-i $inputPath -ss $startTime -t $segmentDuration -c copy $outputPath';
+
+    FFmpegKit.execute('-i file1.mp4 -c:v mpeg4 file2.mp4')
+        .then((session) async {
+      // Unique session id created for this execution
+      final sessionId = session.getSessionId();
+
+      // Command arguments as a single string
+      final command = session.getCommand();
+
+      // Command arguments
+      final commandArguments = session.getArguments();
+
+      // State of the execution. Shows whether it is still running or completed
+      final state = await session.getState();
+
+      // Return code for completed sessions. Will be undefined if session is still running or FFmpegKit fails to run it
+      final returnCode = await session.getReturnCode();
+
+      final startTime = session.getStartTime();
+      final endTime = await session.getEndTime();
+      final duration = await session.getDuration();
+
+      // Console output generated for this execution
+      final output = await session.getOutput();
+
+      // The stack trace if FFmpegKit fails to run a command
+      final failStackTrace = await session.getFailStackTrace();
+
+      // The list of logs generated for this execution
+      final logs = await session.getLogs();
+
+      // The list of statistics generated for this execution (only available on FFmpegSession)
+      final statistics = await (session).getStatistics();
+
+/*
+    // Duration of each short video segment (in seconds)
+    int segmentDuration = 10;
+
+    // Number of short videos to create
+    int numSegments = 5;
+
+    // Output directory for short videos
+    Directory directory = await getTemporaryDirectory();
+    String outputDirectory = directory.path;
+
+    // Create short videos
+    for (int i = 0; i < numSegments; i++) {
+      // Calculate start time and end time for each segment
+      int startTime = i * segmentDuration;
+      int endTime = startTime + segmentDuration;
+
+      // Construct output file path
+      String outputPath = '$outputDirectory$startTime-$endTime.mp4';
+
+      // Slice the video using FFmpeg
+      String command = '-i $inputPath -ss $startTime -t $segmentDuration -c copy $outputPath';
+      var rc = await FFmpegKit.execute(command);
+
+      if (rc == 0) {
+        print('Segment $i created successfully');
+      } else {
+        print('Error creating segment $i');
+      }
+    }*/
+    });
   }
 }

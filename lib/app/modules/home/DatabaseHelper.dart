@@ -39,6 +39,15 @@ class DatabaseHelper {
     printInfo(info: maps.toString());
     return List.generate(maps.length, (i) => UploadData.fromJson(maps[i]));
   }
+  Future<List<UploadData>> getAllPending() async {
+    final db = await database;
+  List<Map> maps = await db.query(TABLE_NAME,
+          columns: ['*'],
+          where: 'status = ?',
+          whereArgs: ["Pending"]);
+     printInfo(info: maps.toString());
+    return List.generate(maps.length, (i) => UploadData.fromJson(maps[i]));
+  }
 
   Future<void> update(UploadData uploadData) async {
     final db = await database;

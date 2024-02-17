@@ -1,5 +1,7 @@
 import 'package:get/get_navigation/src/routes/get_route.dart';
 
+import '../modules/UploadHistory/bindings/upload_history_binding.dart';
+import '../modules/UploadHistory/views/upload_history_view.dart';
 import '/app/modules/home/bindings/home_binding.dart';
 import '/app/modules/home/views/home_view.dart';
 import '/app/modules/main/bindings/main_binding.dart';
@@ -22,6 +24,11 @@ class AppPages {
       name: _Paths.HOME,
       page: () => HomeView(),
       binding: HomeBinding(),
+    ),
+    GetPage(
+      name: _Paths.UPLOAD_HISTORY,
+      page: () =>   UploadHistoryView(),
+      binding: UploadHistoryBinding(),
     ),
   ];
 }
